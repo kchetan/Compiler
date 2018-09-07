@@ -1,0 +1,13 @@
+class Program
+{
+    
+    int main()
+    {
+		int i,num;
+		num = 5;
+		for i = 1,10{
+			callout("print","%d",num*i);
+		}
+    }
+
+}

@@ -1,0 +1,31 @@
+class Program
+{
+    int arr[1000],lis[1000];
+    int main()
+    {
+		int i,num,j;
+		int max;
+		max=0;
+		num = 7;
+		for i = 0,num{
+			arr[i] = 10%num;
+			lis[i] = 1;
+		}
+		
+		for i = 1,num{
+			for j = 0,i{
+				 if ( (arr[i] > arr[j]) && (lis[i] < (lis[j] + 1)) )
+				 {
+					lis[i]=lis[j]+1;
+				}
+			}
+		}
+		for i = 0,num{
+			if(max<lis[i])
+			{
+				max=lis[i];
+			}
+		}
+		callout("printf","%d ",max);
+    }
+}

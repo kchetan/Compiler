@@ -1,0 +1,341 @@
+%glr-parser
+%expect 96
+%{
+#include "ast.h"
+#include <bits/stdc++.h>
+#include "visitorPattern.h"
+#include "CodeGenVisitor.h"
+using namespace std;
+int run=1;
+int yyerror (const char *s)
+{
+	run =0;
+	printf("parser error %s \n ",s);
+	return 0;
+}
+FILE * out_bison = fopen("bison_out.txt","w");
+extern "C" int yylex();
+extern "C" int yyparse();
+extern "C" FILE *yyin;
+Program * root;
+%}
+
+%union
+{
+	double num; 
+	string *strin;
+	unsigned int hex;
+	int integer;
+	int typ;
+	bool binar;
+	char alnum;
+
+	Program *prg;
+	FieldDecl *fld;
+	vector <FieldDecl*> *vfl;
+	MethodDecl *met;
+	vector <MethodDecl*> *vmt;
+	Decl *de;
+	vector <Decl*> *vde;
+	ARG *ar;
+	vector <ARG*> *var;
+	Expression *exp;
+	Literal *lit;
+	INT_LITERAL *ilit;
+	BOOL_LITERAL *blit;
+	Location *loc;
+	VarDecl *vdc;
+	Statement *stm;
+	Block *blk;
+	MethodCall *mcl;
+	MethodCall1 *mc1;
+	MethodCall2 *mc2;
+	Callout *clo;
+	Statement *ieb;
+	Statement *fbl;
+	Ret *ret;
+	vector <string*> *vil;
+	vector <VarDecl*> *vvd;
+	vector <Statement *> *vst;
+	vector <Expression*> *vxp;
+	vector <Callout*> *vco;
+	ASSIGN_OP * asp;
+
+};
+
+%token CLASS
+%token PROGRAM
+%token SQ
+%token DQ
+%token LCB
+%token RCB
+%token SC
+%token COM
+%token LSB
+%token RSB
+%token LRB
+%token RRB
+%token <strin> VOID
+%token <strin> INT
+%token <strin> BOOL
+%token IF
+%token ELSE
+%token FOR
+%token RETURN
+%token BREAK
+%token CONTINUE
+%token CALLOUT
+%token <strin>NOT
+%token <strin>PLUS
+%token <strin>DIFF
+%token <strin>MULT
+%token <strin>DIV
+%token <strin>MOD
+%token <strin>LT
+%token <strin>GT
+%token <strin>LE
+%token <strin>GE
+%token <strin>EQ
+%token <strin>PLUSEQ
+%token <strin>DIFFEQ
+%token <strin>DEQ
+%token <strin>NEQ
+%token <strin>AND
+%token <strin>OR
+%token <binar>TRUE
+%token <binar>FALSE
+%token <integer>DIGIT
+%token <hex>HEXDIGIT
+%token <strin>ID
+%token <alnum>CHARLITERAL
+%token <strin> STRINGLITERAL
+
+%start program
+
+
+%type <lit> literal
+%type <ilit> int_literal
+%type <blit> bool_literal
+%type <asp> assign_op
+%type <prg> program
+%type <vfl> field_decls
+%type <fld> field_decl
+%type <vmt> method_decls
+%type <met> method_decl
+%type <var> args
+%type <ar> arg
+%type <blk> block
+%type <vvd> var_decls
+%type <vdc> var_decl
+%type <vde> decls
+%type <de> decl
+%type <vil> IDS
+%type <vst> statements
+%type <strin> type_t
+%type <stm> statement
+%type <vco> callout_args
+%type <loc> location
+%type <exp> expr
+%type <clo> callout_arg
+%type <mcl> method_call
+%type <vxp> exprs
+
+
+
+%left LT GT LE GE
+%left PLUS DIFF
+%left DIV MULT MOD
+%left NOT
+
+%%
+
+// grammar bison will parse
+// Program will be of the form program-> field_decls, method_decls
+
+program : CLASS PROGRAM LCB field_decls method_decls RCB {$$=new Program($4,$5);root=$$;}
+|CLASS PROGRAM LCB  method_decls RCB {$$=new Program(NULL,$4);root=$$;}
+|CLASS PROGRAM LCB field_decls RCB {$$=new Program($4,NULL);root=$$;}
+|CLASS PROGRAM LCB RCB {$$=new Program(NULL,NULL);root=$$;}
+;
+
+field_decls :field_decls field_decl {$$=$1;$$->push_back($2);}
+|field_decl {$$=new vector<FieldDecl *>();$$->push_back($1);}
+;
+
+field_decl : type_t decls SC {
+								$$=new FieldDecl($1,$2);
+								vector<Decl *> d = $$->getdecls();
+								//cout<<d.size()<<endl;
+								for(int i=0;i<d.size();i++)
+								{
+									d[i]->_ty=(*$1);
+								}
+							 }
+;
+
+decls : decls COM decl  {$$=$1;$$->push_back($3);}
+|decl  {$$=new vector<Decl *>();$$->push_back($1);}
+;
+
+decl : ID {$$=new Decl($1);}
+|ID LSB int_literal RSB {$$=new Decl($1,$3);}
+;
+
+method_decls :method_decls method_decl {$$=$1;$$->push_back($2);}
+|method_decl {/*printf("Method_mult");*/$$=new vector<MethodDecl *>();$$->push_back($1);}
+;
+
+method_decl : type_t ID LRB args RRB block {$$=new MethodDecl($1,$2,$4,$6);/*printf("metod_decl\n");*/}
+|VOID ID LRB args RRB block {$$=new MethodDecl($1,$2,$4,$6);}
+|type_t ID LRB RRB block {$$=new MethodDecl($1,$2,NULL,$5);}
+|VOID ID LRB RRB block {$$=new MethodDecl($1,$2,NULL,$5);}
+;
+
+args :  args COM arg {$$=$1;$$->push_back($3);}
+|arg {$$=new vector<ARG *>() ;$$->push_back($1);}
+;
+
+arg :type_t ID {$$=new ARG($1,$2);/*printf("arg\n");*/}
+;
+
+type_t : INT  {$$=$1;}
+| BOOL {$$=$1;}
+;
+
+block : LCB var_decls statements RCB {/*printf("block\n");*/$$=new Block($2,$3);}
+|LCB statements RCB {$$=new Block(NULL,$2);}
+|LCB var_decls RCB {$$=new Block($2,NULL);}
+|LCB RCB{$$=new Block(NULL,NULL);}
+;
+
+var_decls : var_decls var_decl {$$=$1;$$->push_back($2);}
+|var_decl {/*printf("var_decl\n");*/$$=new vector<VarDecl * >();$$->push_back($1);}
+;
+
+var_decl : type_t IDS SC {$$=new VarDecl($1,$2);}
+;
+
+IDS : IDS COM ID {$$=$1;$$->push_back($3);}
+| ID {$$=new vector< string *> ();$$->push_back($1);}
+;
+
+statements :statements statement  {$$=$1;$$->push_back($2);}
+| statement {$$=new vector< Statement *> ();$$->push_back($1);}
+;
+
+statement : location assign_op expr SC {$$=new Statement($1,$2,$3);}
+| method_call SC {$$=$1;}
+| IF LRB expr RRB block {$$=new Statement1($3,$5);}
+| IF LRB expr RRB block ELSE block {$$=new Statement1($3,$5,$7);}
+| FOR ID EQ expr COM expr block {/*printf("FOR\n");*/$$=new Statement1($2,$4,$6,$7);}
+| RETURN expr SC {$$=new Ret($2);}
+| RETURN SC {$$=new Ret();}
+| BREAK SC {$$=new Statement(0);}
+| CONTINUE SC {$$=new Statement(1);}
+|block {$$=$1;}
+;
+
+assign_op:EQ {$$=new ASSIGN_OP($1);}
+|PLUSEQ{$$=new ASSIGN_OP($1);}
+|DIFFEQ{$$=new ASSIGN_OP($1);}
+;
+
+method_call :ID LRB exprs RRB {$$=new MethodCall1($1,$3);}
+|ID LRB RRB {$$=new MethodCall1($1,NULL);}
+|CALLOUT LRB STRINGLITERAL callout_args RRB {$$=new MethodCall2($3,$4);}
+|CALLOUT LRB STRINGLITERAL RRB {$$=new MethodCall2($3,NULL);}
+;
+
+exprs : expr COM exprs {$$=$3;$$->push_back($1);}
+|expr {$$=new vector<Expression *>();$$->push_back($1);}
+;
+
+callout_args :COM callout_arg callout_args {$$=$3;$$->push_back($2);}
+| COM callout_arg {$$=new vector<Callout *>();$$->push_back($2);}
+;
+
+callout_arg : expr {$$=$1;}
+| STRINGLITERAL {$$=new Callout($1);}
+;
+
+location : ID {$$=new Location($1);}
+| ID LSB expr RSB {$$=new Location($1,$3);}
+;
+
+expr :location {$$=new Location_expr($1);}
+| method_call  {$$=$1;}
+|literal {$$=$1;}
+|expr PLUS expr {$$=new BiExpression($1,$2,$3);}
+|expr DIFF expr {$$=new BiExpression($1,$2,$3);}
+|expr MULT expr {$$=new BiExpression($1,$2,$3);}
+|expr DIV expr {$$=new BiExpression($1,$2,$3);}
+|expr MOD expr {$$=new BiExpression($1,$2,$3);}
+|expr LT expr {$$=new BiExpression($1,$2,$3);}
+|expr GT expr {$$=new BiExpression($1,$2,$3);}
+|expr LE expr {$$=new BiExpression($1,$2,$3);}
+|expr GE expr {$$=new BiExpression($1,$2,$3);}
+|expr DEQ expr {$$=new BiExpression($1,$2,$3);}
+|expr NEQ expr {$$=new BiExpression($1,$2,$3);}
+|expr AND expr {$$=new BiExpression($1,$2,$3);}
+|expr OR expr {$$=new BiExpression($1,$2,$3);}
+|DIFF expr  {$$=new UExpression($1,$2);}
+|NOT expr {$$=new UExpression($1,$2);}
+|LRB expr RRB {$$=$2;}
+;
+
+
+literal:int_literal {$$=$1;}
+|CHARLITERAL {$$=new Literal($1);}
+|bool_literal {$$=$1;}
+;
+
+
+
+int_literal : DIGIT {$$=new INT_LITERAL($1);}
+|HEXDIGIT {$$=new INT_LITERAL($1);}
+;
+
+bool_literal : TRUE {$$=new BOOL_LITERAL($1);}
+|FALSE {$$=new BOOL_LITERAL($1);}
+;
+
+%%
+void xml_visitor()
+{
+	fprintf(out_xml,"<program>\n");
+	
+
+	fprintf(out_xml,"<field_declarations count=\"%d\">\n",int(root->getFields().size())); 
+	for(int i=0;i<root->getFields().size();i++)
+	{
+		root->getFields()[i]->print();
+	}
+	fprintf(out_xml,"</field_declarations>\n");
+
+	fprintf(out_xml,"<statement_declarations count=\"%d\">\n",int(root->getMethods().size())); 
+	for(int i=0;i<root->getMethods().size();i++)
+	{
+		root->getMethods()[i]->print();
+	}
+
+	fprintf(out_xml,"</statement_declarations>\n");
+	fprintf(out_xml,"</program>\n");
+}
+
+int main(int argc, char **argv) {
+	FILE *myfile = fopen(argv[1], "r");
+	if (!myfile) {
+		cout << "I can't open a.decaf.file!" << endl;
+		return -1;
+	}
+	yyin = myfile;	
+	do {
+		yyparse();
+	} while (!feof(yyin)); 
+	if(run){
+		CodeGenVisitor cgv;
+		root->accept(cgv);
+		}
+	//xml_visitor();
+	//yyparse();
+}

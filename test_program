@@ -1,0 +1,27 @@
+class Program
+{
+    int arr[1000];
+    int main()
+    {
+		int i,j,num;
+		num=7;
+		callout("printf","num = %d ",num);
+		for i = 0,num{
+			arr[i]=(10*i)%num;
+		}
+		for i = 0,num{
+			for j = 0,i{
+				if(arr[i]>arr[j])
+				{
+					int x;
+					x=arr[i];
+					arr[i]=arr[j];
+					arr[j]=x;
+				}
+			}
+		}
+		for i = 0,num{
+			callout("printf","%d ",arr[i]);
+		}
+    }
+} 

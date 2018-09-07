@@ -1,0 +1,4 @@
+make clean
+make
+./scanner $1 > ltest_program.ll
+lli ltest_program.ll

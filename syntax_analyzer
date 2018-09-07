@@ -1,0 +1,4 @@
+bison -d bison.ypp 
+flex flex.l 
+g++ -g -std=c++11 lex.yy.c bison.tab.cpp -lfl `llvm-config --libs core jit native --cxxflags` `llvm-config --ldflags --libs` -o scanner
+./scanner $1
